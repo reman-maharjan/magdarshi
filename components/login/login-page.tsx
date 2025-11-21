@@ -7,7 +7,7 @@ import { Eye, EyeOff, Chrome, Facebook } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useSignIn } from "@/hooks/use-auth"
+import { signIn } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -17,9 +17,8 @@ export function LoginPage() {
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-
-  const { execute: signIn, isLoading } = useSignIn()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,16 +28,25 @@ export function LoginPage() {
       return
     }
 
-    const result = await signIn({
-      email,
-      password,
-      rememberMe,
-      callbackURL: window.location.origin // or leave empty if backend handles it
-    })
+    setIsLoading(true)
+    try {
+      const result = await signIn.email({
+        email,
+        password,
+        rememberMe,
+        callbackURL: window.location.origin,
+      })
 
-    if (result) {
-      toast.success("Logged in successfully")
-      router.push("/")
+      if (result.error) {
+        toast.error(result.error.message || "Failed to sign in")
+      } else {
+        toast.success("Logged in successfully")
+        router.push("/")
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An unexpected error occurred")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -76,7 +84,8 @@ export function LoginPage() {
                 <>
                   Don't have an account?{" "}
                   <button
-                    onClick={() => setIsSignUp(true)}
+                    type="button"
+                    onClick={() => router.push("/signup")}
                     className="text-green-700 dark:text-green-400 font-semibold hover:underline"
                   >
                     Create now

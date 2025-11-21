@@ -7,7 +7,7 @@ import { Eye, EyeOff, Chrome, Facebook } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useSignIn, useSignUp, useSendVerificationEmail } from "@/hooks/use-auth"
+import { signIn, signUp, sendVerificationEmail } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -20,13 +20,8 @@ export function SignupPage() {
     const [image, setImage] = useState<File | null>(null)
     const [rememberMe, setRememberMe] = useState(false)
     const [isSignUp, setIsSignUp] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
-
-    const { execute: signIn, isLoading: isSignInLoading } = useSignIn()
-    const { execute: signUp, isLoading: isSignUpLoading } = useSignUp()
-    const { execute: sendVerificationEmail, isLoading: isSendVerificationEmailLoading } = useSendVerificationEmail()
-
-    const loading = isSignInLoading || isSignUpLoading || isSendVerificationEmailLoading
 
     const convertToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -39,45 +34,49 @@ export function SignupPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setIsLoading(true)
 
         try {
             const imageBase64 = image ? await convertToBase64(image) : undefined
             if (isSignUp) {
-                const result = await signUp({
+                const result = await signUp.email({
                     email,
                     password,
                     name,
                     image: imageBase64,
-                    rememberMe,
-                    callbackURL: window.location.origin
+                    callbackURL: window.location.origin,
                 })
 
-                if (result) {
+                if (result.error) {
+                    toast.error(result.error.message || "Failed to sign up")
+                } else {
+                    // Send verification email
                     await sendVerificationEmail({
                         email,
-                        callbackURL: `${window.location.origin}/auth/verify-email`
                     })
                     toast.success("Account created successfully. Please check your email to verify your account.")
-                    // Automatically sign in or redirect to login?
-                    // The original code redirected to login
                     router.push(`/auth/send-verification?email=${encodeURIComponent(email)}`)
                 }
             } else {
-                const result = await signIn({
+                const result = await signIn.email({
                     email,
                     password,
                     rememberMe,
-                    callbackURL: window.location.origin
+                    callbackURL: window.location.origin,
                 })
 
-                if (result) {
+                if (result.error) {
+                    toast.error(result.error.message || "Failed to sign in")
+                } else {
                     toast.success("Logged in successfully")
                     router.push("/")
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            toast.error("An unexpected error occurred")
+            toast.error(error.message || "An unexpected error occurred")
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -96,7 +95,8 @@ export function SignupPage() {
                                 <>
                                     Already have an account?{" "}
                                     <button
-                                        onClick={() => setIsSignUp(false)}
+                                        type="button"
+                                        onClick={() => router.push("/login")}
                                         className="text-green-700 dark:text-green-400 font-semibold hover:underline"
                                     >
                                         Sign in
@@ -212,9 +212,9 @@ export function SignupPage() {
                         <Button
                             type="submit"
                             className="w-full bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-2.5 rounded-full transition-colors"
-                            disabled={loading}
+                            disabled={isLoading}
                         >
-                            {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign in"}
+                            {isLoading ? "Loading..." : isSignUp ? "Create Account" : "Sign in"}
                         </Button>
 
                         {/* Divider */}

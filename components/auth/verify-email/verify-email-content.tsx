@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { useVerifyEmail } from "@/hooks/use-auth"
+import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
@@ -11,8 +11,8 @@ export default function VerifyEmailContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const token = searchParams.get("token")
+    console.log("token", token)
     const callbackURL = searchParams.get("callbackURL")
-    const { execute: verifyEmail, isLoading, error, data } = useVerifyEmail()
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
     const [message, setMessage] = useState("Verifying your email...")
 
@@ -25,41 +25,31 @@ export default function VerifyEmailContent() {
 
         const verify = async () => {
             try {
-                const result = await verifyEmail({
-                    token,
-                    ...(callbackURL && { callbackURL })
-                })
-                if (result?.status) {
-                    setStatus("success")
-                    setMessage("Email verified successfully")
-                } else {
-                    if (!result) {
+                await authClient.verifyEmail({
+                    query: {
+                        token,
+                    },
+                }, {
+                    onSuccess: () => {
+                        setStatus("success")
+                        setMessage("Email verified successfully")
+                    },
+                    onError: (ctx: any) => {
                         setStatus("error")
+                        setMessage(ctx.error.message || "Failed to verify email")
                     }
-                }
-            } catch (error) {
+                })
+            } catch (error: any) {
                 setStatus("error")
-                setMessage("An error occurred while verifying your email")
+                setMessage(error.message || "An error occurred while verifying your email")
             }
         }
 
         verify()
-    }, [token, callbackURL])
-
-    // Sync hook error state to local message
-    useEffect(() => {
-        if (error) {
-            setStatus("error")
-            setMessage(error)
-        }
-    }, [error])
+    }, [token])
 
     const handleContinue = () => {
-        if (callbackURL) {
-            router.push(callbackURL)
-        } else {
-            router.push("/login")
-        }
+        router.push("/login")
     }
 
     return (
