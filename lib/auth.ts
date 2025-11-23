@@ -13,6 +13,24 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
+        sendResetPassword: async ({ user, url, token }, request) => {
+            // This function is ONLY called if the user exists in the database
+            // Better Auth automatically validates the email before calling this
+            console.log(`Sending password reset email to: ${user.email}`);
+            console.log(`Reset URL: ${url}`);
+            console.log(`Token: ${token}`);
+
+            // TODO: Implement your email sending logic here
+            // Example:
+            // await sendEmail({
+            //     to: user.email,
+            //     subject: "Reset your password",
+            //     html: `Click the link to reset your password: ${url}`,
+            // });
+
+            // For now, just log it (you'll need to implement actual email sending)
+            console.log("Password reset email would be sent to:", user.email);
+        },
     },
     plugins: [
         nextCookies(),

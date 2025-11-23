@@ -50,13 +50,8 @@ export function LoginPage() {
     }
   }
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      toast.error("Please enter your email address")
-      return
-    }
-    // Note: Forgot password is not yet implemented in the new auth service/hooks
-    toast.info("Forgot password functionality coming soon")
+  const handleForgotPassword = () => {
+    router.push("/auth/forgot-password")
   }
 
   return (
